@@ -8,9 +8,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Supabase configuration
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://vovdtjsieukrftiolawy.supabase.co";
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvdmR0anNpZXVrcmZ0aW9sYXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTI5NzYsImV4cCI6MjA3MTg4ODk3Nn0._w2iNeDWTChJsb7uo5QHFM1FGiegSjJuF1yyuGJ95Gc";
-const BUCKET_NAME = process.env.BUCKET_NAME || "Photos";
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const BUCKET_NAME = process.env.BUCKET_NAME;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
