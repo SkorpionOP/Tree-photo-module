@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Upload API Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .api-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+
+        .api-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-indicator.online {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-indicator.offline {
+            background: #f44336;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+
+        .upload-area:hover {
+            border-color: #2196F3;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #2196F3;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336, #e91e63);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .photo-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .url-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .endpoint-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .endpoint-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Photo Upload API Demo</h1>
+            <p>Simple backend with 3 endpoints: health, upload, and delete</p>
+        </div>
+
+        <div class="content">
+            <!-- Health Check Section -->
+            <div class="api-section">
+                <h2>
+                    <span class="status-indicator" id="healthStatus"></span>
+                    Health Check
+                </h2>
+                <div class="endpoint-info">
+                    <strong>Endpoint:</strong> <code>GET /health</code><br>
+                    <strong>Purpose:</strong> Check if the API server is running
+                </div>
+                <button class="btn" onclick="checkHealth()">
+                    <span id="healthLoader" style="display: none;" class="loading"></span>
+                    Check API Status
+                </button>
+                <div id="healthResult" class="result"></div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="api-section">
+                <h2>📤 Upload Photo</h2>
+                <div class="endpoint-info">
+                    <strong>Endpoint:</strong> <code>POST /upload</code><br>
+                    <strong>Purpose:</strong> Upload a single photo and get back a unique encoded URL<br>
+                    <strong>Max Size:</strong> 5MB | <strong>Formats:</strong> JPG, PNG, GIF, WebP
+                </div>
+                
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()" 
+                     ondrop="dropHandler(event)" ondragover="dragOverHandler(event)" ondragleave="dragLeaveHandler(event)">
+                    <div id="uploadText">
+                        🖼️ Click here or drag & drop your photo<br>
+                        <small>Maximum file size: 5MB</small>
+                    </div>
+                    <img id="photoPreview" class="photo-preview" style="display: none;">
+                </div>
+                
+                <input type="file" id="fileInput" accept="image/*" onchange="previewFile(event)">
+                
+                <button class="btn" onclick="uploadPhoto()" id="uploadBtn" disabled>
+                    <span id="uploadLoader" style="display: none;" class="loading"></span>
+                    Upload Photo
+                </button>
+                
+                <div id="uploadResult" class="result"></div>
+                <div id="photoUrl" class="url-display" style="display: none;"></div>
+            </div>
+
+            <!-- Delete Section -->
+            <div class="api-section">
+                <h2>🗑️ Delete Photo</h2>
+                <div class="endpoint-info">
+                    <strong>Endpoint:</strong> <code>DELETE /delete/:filename</code><br>
+                    <strong>Purpose:</strong> Delete a photo using its filename
+                </div>
+                
+                <input type="text" id="deleteFilename" placeholder="Enter filename to delete (e.g., abc123_def456_1234567890.jpg)" 
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0;">
+                
+                <button class="btn btn-danger" onclick="deletePhoto()" id="deleteBtn">
+                    <span id="deleteLoader" style="display: none;" class="loading"></span>
+                    Delete Photo
+                </button>
+                
+                <div id="deleteResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000'; // Change this to your API URL
+        let currentPhotoFilename = null;
+
+        // Health Check Function
+        async function checkHealth() {
+            const loader = document.getElementById('healthLoader');
+            const result = document.getElementById('healthResult');
+            const status = document.getElementById('healthStatus');
+            
+            loader.style.display = 'inline-block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+                
+                status.className = 'status-indicator online';
+                
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Error: ${error.message}`;
+                result.style.display = 'block';
+                
+                status.className = 'status-indicator offline';
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // File Preview Functions
+        function previewFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('photoPreview');
+                    const uploadText = document.getElementById('uploadText');
+                    
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    uploadText.style.display = 'none';
+                    
+                    document.getElementById('uploadBtn').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Drag and Drop Functions
+        function dropHandler(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('dragover');
+            
+            const files = ev.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                previewFile({ target: { files: files } });
+            }
+        }
+
+        function dragOverHandler(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('dragover');
+        }
+
+        function dragLeaveHandler(ev) {
+            ev.currentTarget.classList.remove('dragover');
+        }
+
+        // Upload Photo Function
+        async function uploadPhoto() {
+            const fileInput = document.getElementById('fileInput');
+            const loader = document.getElementById('uploadLoader');
+            const result = document.getElementById('uploadResult');
+            const urlDisplay = document.getElementById('photoUrl');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a photo first');
+                return;
+            }
+            
+            loader.style.display = 'inline-block';
+            uploadBtn.disabled = true;
+            result.style.display = 'none';
+            urlDisplay.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('photo', fileInput.files[0]);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.className = 'result success';
+                    result.textContent = JSON.stringify(data, null, 2);
+                    
+                    currentPhotoFilename = data.data.filename;
+                    urlDisplay.textContent = `Photo URL: ${data.data.url}`;
+                    urlDisplay.style.display = 'block';
+                    
+                    // Auto-fill delete input
+                    document.getElementById('deleteFilename').value = data.data.filename;
+                } else {
+                    result.className = 'result error';
+                    result.textContent = JSON.stringify(data, null, 2);
+                }
+                
+                result.style.display = 'block';
+                
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Error: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                uploadBtn.disabled = false;
+            }
+        }
+
+        // Delete Photo Function
+        async function deletePhoto() {
+            const filename = document.getElementById('deleteFilename').value.trim();
+            const loader = document.getElementById('deleteLoader');
+            const result = document.getElementById('deleteResult');
+            const deleteBtn = document.getElementById('deleteBtn');
+            
+            if (!filename) {
+                alert('Please enter a filename to delete');
+                return;
+            }
+            
+            loader.style.display = 'inline-block';
+            deleteBtn.disabled = true;
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    result.className = 'result success';
+                    document.getElementById('deleteFilename').value = '';
+                } else {
+                    result.className = 'result error';
+                }
+                
+                result.textContent = JSON.stringify(data, null, 2);
+                result.style.display = 'block';
+                
+            } catch (error) {
+                result.className = 'result error';
+                result.textContent = `Error: ${error.message}`;
+                result.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                deleteBtn.disabled = false;
+            }
+        }
+
+        // Check health on page load
+        window.onload = function() {
+            checkHealth();
+        };
+    </script>
+</body>
+</html>
